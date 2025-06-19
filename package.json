@@ -1,0 +1,21 @@
+{
+  "name": "sanyuan-robot",
+  "version": "1.0.0",
+  "description": "三元宇宙 Discord 机器人",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "三元宇宙"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.20.0"
+  }
+}
