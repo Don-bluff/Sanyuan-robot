@@ -1,6 +1,44 @@
 // 三元宇宙 Discord 机器人
 const { Client, GatewayIntentBits, Events, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const config = require('./config.js');
+
+// 配置读取 - 优先使用环境变量，然后使用本地配置文件
+let config;
+try {
+    // 尝试从环境变量读取
+    if (process.env.DISCORD_TOKEN) {
+        config = {
+            token: process.env.DISCORD_TOKEN,
+            clientId: process.env.CLIENT_ID,
+            guildId: process.env.GUILD_ID
+        };
+        console.log('✅ 使用环境变量配置');
+    } else {
+        // 如果没有环境变量，则使用本地配置文件
+        config = require('./config.js');
+        console.log('✅ 使用本地配置文件');
+    }
+} catch (error) {
+    console.error('❌ 配置加载失败:', error.message);
+    process.exit(1);
+}
+
+// 验证配置
+if (!config.token) {
+    console.error('❌ 错误：未找到 DISCORD_TOKEN！');
+    console.error('请设置环境变量或检查 config.js 文件');
+    process.exit(1);
+}
+
+if (!config.clientId) {
+    console.error('❌ 错误：未找到 CLIENT_ID！');
+    console.error('请设置环境变量或检查 config.js 文件');
+    process.exit(1);
+}
+
+console.log(`🤖 机器人 ID: ${config.clientId}`);
+if (config.guildId) {
+    console.log(`🏠 服务器 ID: ${config.guildId}`);
+}
 
 // 创建客户端实例
 const client = new Client({
@@ -24,12 +62,20 @@ const commands = [
     
     new SlashCommandBuilder()
         .setName('serverinfo')
-        .setDescription('显示服务器信息')
+        .setDescription('显示服务器信息'),
+    
+    new SlashCommandBuilder()
+        .setName('status')
+        .setDescription('显示机器人运行状态')
 ];
 
 // 当机器人准备就绪时触发
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`✅ 机器人已上线！登录为 ${readyClient.user.tag}`);
+    console.log(`🌐 运行环境: ${process.env.NODE_ENV || 'development'}`);
+    
+    // 设置机器人状态
+    client.user.setActivity('三元宇宙', { type: 'WATCHING' });
     
     // 注册斜杠命令
     try {
@@ -70,6 +116,42 @@ client.on(Events.InteractionCreate, async (interaction) => {
             
         } else if (commandName === 'hello') {
             await interaction.reply(`👋 你好，${interaction.user.displayName}！欢迎来到三元宇宙！`);
+            
+        } else if (commandName === 'status') {
+            const uptime = process.uptime();
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = Math.floor(uptime % 60);
+            
+            const embed = {
+                color: 0x00ff00,
+                title: '🤖 机器人状态',
+                fields: [
+                    {
+                        name: '运行时间',
+                        value: `${hours}小时 ${minutes}分钟 ${seconds}秒`,
+                        inline: true
+                    },
+                    {
+                        name: '内存使用',
+                        value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
+                        inline: true
+                    },
+                    {
+                        name: 'Node.js 版本',
+                        value: process.version,
+                        inline: true
+                    },
+                    {
+                        name: '运行环境',
+                        value: process.env.NODE_ENV || 'development',
+                        inline: true
+                    }
+                ],
+                timestamp: new Date().toISOString()
+            };
+            
+            await interaction.reply({ embeds: [embed] });
             
         } else if (commandName === 'serverinfo') {
             const guild = interaction.guild;
@@ -134,6 +216,18 @@ client.on(Events.Error, (error) => {
 
 process.on('unhandledRejection', (error) => {
     console.error('❌ 未处理的 Promise 拒绝:', error);
+});
+
+process.on('SIGINT', () => {
+    console.log('🛑 收到终止信号，正在关闭机器人...');
+    client.destroy();
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('🛑 收到终止信号，正在关闭机器人...');
+    client.destroy();
+    process.exit(0);
 });
 
 // 登录机器人

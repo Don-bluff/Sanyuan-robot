@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "三元宇宙 Discord 机器人",
   "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
