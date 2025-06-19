@@ -13,9 +13,18 @@ try {
         };
         console.log('✅ 使用环境变量配置');
     } else {
-        // 如果没有环境变量，则使用本地配置文件
-        config = require('./config.js');
-        console.log('✅ 使用本地配置文件');
+        // 如果没有环境变量，则尝试使用本地配置文件
+        try {
+            config = require('./config.js');
+            console.log('✅ 使用本地配置文件');
+        } catch (configError) {
+            console.error('❌ 未找到配置文件，且未设置环境变量！');
+            console.error('请设置以下环境变量：');
+            console.error('- DISCORD_TOKEN: Discord 机器人 TOKEN');
+            console.error('- CLIENT_ID: Discord 应用客户端 ID');
+            console.error('- GUILD_ID: Discord 服务器 ID（可选）');
+            process.exit(1);
+        }
     }
 } catch (error) {
     console.error('❌ 配置加载失败:', error.message);
