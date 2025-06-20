@@ -194,19 +194,17 @@ Hi ${member}，很高兴见到你！
 
 为了提供更聚焦的体验，我们设置了以下访问权限：
 
-• \`系统权限\`：购买了**三元系统**的玩家，解锁三千经阁  
-• \`功法权限\`：购买了**三元功法**的玩家，解锁三千经阁  
-• \`心法权限\`：订阅了**三元心法**的玩家，解锁悟道殿  
-• \`阵法权限\`：购买了**三元阵法**的玩家，解锁万象城  
+• 购买了**三元系统**的玩家，解锁三千经阁  
+• 购买了**三元功法**的玩家，解锁三千经阁  
+• 订阅了**三元心法**的玩家，解锁悟道殿  
+• 购买了**三元阵法**的玩家，解锁万象城  
 （🗣️ *问道峰为所有玩家开放，无需权限*）
 
 ---
 
 ✅ **如何解锁对应权限？**
 
-请输入命令：  
-\`/verify 你的邮箱\`  
-我们将根据你在 **donbluff.com** 注册/购买时使用的邮箱，为你自动分配对应权限身份组。
+前往左侧频道<权限开通>，根据提示步骤即可开始对应权限。
 
 ---
 
@@ -241,6 +239,86 @@ Hi ${member}，很高兴见到你！
         console.log('⚠️  未找到欢迎频道');
     }
 });
+
+// 欢迎频道清理函数
+async function cleanWelcomeChannel() {
+    try {
+        console.log('🧹 开始清理欢迎频道...');
+        
+        // 遍历机器人所在的所有服务器
+        for (const [guildId, guild] of client.guilds.cache) {
+            try {
+                // 查找欢迎频道
+                let welcomeChannel;
+                if (config.welcomeChannelId) {
+                    welcomeChannel = guild.channels.cache.get(config.welcomeChannelId);
+                } else {
+                    // 如果没有指定频道，寻找包含 "欢迎" 或 "welcome" 的频道
+                    welcomeChannel = guild.channels.cache.find(channel => 
+                        channel.name.includes('欢迎') || 
+                        channel.name.includes('welcome') ||
+                        channel.name.includes('general')
+                    );
+                }
+                
+                if (welcomeChannel && welcomeChannel.isTextBased()) {
+                    // 获取24小时前的时间戳
+                    const yesterday = new Date();
+                    yesterday.setHours(yesterday.getHours() - 24);
+                    
+                    // 获取频道消息
+                    const messages = await welcomeChannel.messages.fetch({ limit: 100 });
+                    
+                    // 过滤出24小时前的消息
+                    const oldMessages = messages.filter(message => 
+                        message.createdTimestamp < yesterday.getTime()
+                    );
+                    
+                    if (oldMessages.size > 0) {
+                        // 批量删除消息
+                        try {
+                            await welcomeChannel.bulkDelete(oldMessages, true);
+                            console.log(`✅ 已清理服务器 ${guild.name} 欢迎频道的 ${oldMessages.size} 条消息`);
+                        } catch (bulkError) {
+                            // 如果批量删除失败，逐条删除
+                            console.log(`⚠️  批量删除失败，改为逐条删除: ${bulkError.message}`);
+                            let deletedCount = 0;
+                            for (const [messageId, message] of oldMessages) {
+                                try {
+                                    await message.delete();
+                                    deletedCount++;
+                                } catch (deleteError) {
+                                    console.error(`❌ 删除消息失败: ${deleteError.message}`);
+                                }
+                            }
+                            console.log(`✅ 已逐条清理服务器 ${guild.name} 欢迎频道的 ${deletedCount} 条消息`);
+                        }
+                    } else {
+                        console.log(`📝 服务器 ${guild.name} 欢迎频道无需清理`);
+                    }
+                }
+            } catch (guildError) {
+                console.error(`❌ 清理服务器 ${guild.name} 欢迎频道时出错:`, guildError);
+            }
+        }
+        
+        console.log('✅ 欢迎频道清理完成');
+        
+    } catch (error) {
+        console.error('❌ 欢迎频道清理过程出错:', error);
+    }
+}
+
+// 启动欢迎频道清理定时器
+function startWelcomeChannelCleaner() {
+    // 立即执行一次清理
+    setTimeout(cleanWelcomeChannel, 60000); // 启动后1分钟执行第一次清理
+    
+    // 每24小时清理一次 (86400000 毫秒 = 24小时)
+    setInterval(cleanWelcomeChannel, 86400000);
+    
+    console.log('🧹 欢迎频道清理器已启动，每24小时清理一次');
+}
 
 // 处理斜杠命令交互
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -763,6 +841,8 @@ function startPermissionChecker() {
 client.login(config.token).then(() => {
     // 机器人登录成功后启动权限检查器
     startPermissionChecker();
+    // 同时启动欢迎频道清理器
+    startWelcomeChannelCleaner();
 }).catch((error) => {
     console.error('❌ 机器人登录失败:', error);
     process.exit(1);
