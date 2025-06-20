@@ -315,24 +315,29 @@ async function checkExpiredPermissions() {
         console.log('🔍 开始检查过期权限...');
         
         // 查询所有已过期的 xinfa 权限
+        // 首先获取 xinfa 权限的 ID
+        const { data: xinfaPermission } = await supabase
+            .from('permissions')
+            .select('id')
+            .eq('slug', 'xinfa')
+            .single();
+
+        if (!xinfaPermission) {
+            console.log('⚠️  未找到 xinfa 权限定义');
+            return;
+        }
+
+        // 查询过期的 xinfa 权限
         const { data: expiredPermissions, error } = await supabase
             .from('user_permissions')
             .select(`
                 user_id,
                 permission_id,
                 expires_at,
-                discord_user_id,
-                user_profiles (
-                    email,
-                    nickname
-                ),
-                permissions (
-                    slug,
-                    name
-                )
+                discord_user_id
             `)
             .eq('is_active', true)
-            .eq('permissions.slug', 'xinfa')
+            .eq('permission_id', xinfaPermission.id)
             .not('expires_at', 'is', null)
             .lt('expires_at', new Date().toISOString());
 
@@ -346,10 +351,26 @@ async function checkExpiredPermissions() {
             return;
         }
 
-        console.log(`📋 发现 ${expiredPermissions.length} 个过期的 xinfa 权限`);
+        // 为每个过期权限获取用户信息
+        const expiredPermissionsWithUserInfo = [];
+        for (const perm of expiredPermissions) {
+            const { data: userProfile } = await supabase
+                .from('user_profiles')
+                .select('email, nickname')
+                .eq('id', perm.user_id)
+                .single();
+
+            expiredPermissionsWithUserInfo.push({
+                ...perm,
+                user_profiles: userProfile || { email: 'unknown', nickname: 'unknown' },
+                permissions: { slug: 'xinfa', name: '心法权限' }
+            });
+        }
+
+        console.log(`📋 发现 ${expiredPermissionsWithUserInfo.length} 个过期的 xinfa 权限`);
 
         // 处理每个过期权限
-        for (const expiredPerm of expiredPermissions) {
+        for (const expiredPerm of expiredPermissionsWithUserInfo) {
             try {
                 // 在数据库中撤销权限
                 const { error: revokeError } = await supabase
