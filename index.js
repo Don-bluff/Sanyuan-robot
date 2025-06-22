@@ -108,7 +108,11 @@ const commands = [
             option.setName('email')
                 .setDescription('你的邮箱地址')
                 .setRequired(true)
-        )
+        ),
+    
+    new SlashCommandBuilder()
+        .setName('clean')
+        .setDescription('手动清理欢迎频道消息（仅管理员）')
 ];
 
 // 当机器人准备就绪时触发
@@ -251,10 +255,13 @@ async function cleanWelcomeChannel() {
         // 遍历机器人所在的所有服务器
         for (const [guildId, guild] of client.guilds.cache) {
             try {
+                console.log(`📊 正在检查服务器: ${guild.name} (ID: ${guildId})`);
+                
                 // 查找欢迎频道
                 let welcomeChannel;
                 if (config.welcomeChannelId) {
                     welcomeChannel = guild.channels.cache.get(config.welcomeChannelId);
+                    console.log(`🎯 使用配置的欢迎频道ID: ${config.welcomeChannelId}`);
                 } else {
                     // 如果没有指定频道，寻找包含 "欢迎" 或 "welcome" 的频道
                     welcomeChannel = guild.channels.cache.find(channel => 
@@ -262,43 +269,114 @@ async function cleanWelcomeChannel() {
                         channel.name.includes('welcome') ||
                         channel.name.includes('general')
                     );
+                    if (welcomeChannel) {
+                        console.log(`🔍 自动找到欢迎频道: ${welcomeChannel.name} (ID: ${welcomeChannel.id})`);
+                    }
                 }
                 
-                if (welcomeChannel && welcomeChannel.isTextBased()) {
-                    // 获取24小时前的时间戳
-                    const yesterday = new Date();
-                    yesterday.setHours(yesterday.getHours() - 24);
+                if (!welcomeChannel) {
+                    console.log(`⚠️  服务器 ${guild.name} 未找到欢迎频道`);
+                    continue;
+                }
+                
+                if (!welcomeChannel.isTextBased()) {
+                    console.log(`⚠️  频道 ${welcomeChannel.name} 不是文本频道`);
+                    continue;
+                }
+                
+                // 检查机器人权限
+                const botMember = await guild.members.fetch(client.user.id);
+                const permissions = welcomeChannel.permissionsFor(botMember);
+                
+                if (!permissions.has('ViewChannel')) {
+                    console.log(`❌ 机器人没有查看频道权限: ${welcomeChannel.name}`);
+                    continue;
+                }
+                
+                if (!permissions.has('ReadMessageHistory')) {
+                    console.log(`❌ 机器人没有读取消息历史权限: ${welcomeChannel.name}`);
+                    continue;
+                }
+                
+                if (!permissions.has('ManageMessages')) {
+                    console.log(`❌ 机器人没有管理消息权限: ${welcomeChannel.name}`);
+                    continue;
+                }
+                
+                console.log(`✅ 权限检查通过: ${welcomeChannel.name}`);
+                
+                // 获取24小时前的时间戳
+                const yesterday = new Date();
+                yesterday.setHours(yesterday.getHours() - 24);
+                console.log(`⏰ 删除时间基准: ${yesterday.toLocaleString('zh-CN')}`);
+                
+                // 获取频道消息
+                const messages = await welcomeChannel.messages.fetch({ limit: 100 });
+                console.log(`📨 获取到 ${messages.size} 条消息`);
+                
+                // 过滤出24小时前的消息
+                const oldMessages = messages.filter(message => 
+                    message.createdTimestamp < yesterday.getTime()
+                );
+                
+                console.log(`🗑️  找到 ${oldMessages.size} 条超过24小时的消息`);
+                
+                if (oldMessages.size > 0) {
+                    // 分离14天内和14天外的消息（Discord API限制）
+                    const twoWeeksAgo = new Date();
+                    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
                     
-                    // 获取频道消息
-                    const messages = await welcomeChannel.messages.fetch({ limit: 100 });
-                    
-                    // 过滤出24小时前的消息
-                    const oldMessages = messages.filter(message => 
-                        message.createdTimestamp < yesterday.getTime()
+                    const recentOldMessages = oldMessages.filter(message => 
+                        message.createdTimestamp > twoWeeksAgo.getTime()
                     );
                     
-                    if (oldMessages.size > 0) {
-                        // 批量删除消息
+                    const veryOldMessages = oldMessages.filter(message => 
+                        message.createdTimestamp <= twoWeeksAgo.getTime()
+                    );
+                    
+                    console.log(`📋 14天内的旧消息: ${recentOldMessages.size} 条`);
+                    console.log(`📋 超过14天的旧消息: ${veryOldMessages.size} 条`);
+                    
+                    let totalDeleted = 0;
+                    
+                    // 批量删除14天内的消息
+                    if (recentOldMessages.size > 0) {
                         try {
-                            await welcomeChannel.bulkDelete(oldMessages, true);
-                            console.log(`✅ 已清理服务器 ${guild.name} 欢迎频道的 ${oldMessages.size} 条消息`);
+                            await welcomeChannel.bulkDelete(recentOldMessages, true);
+                            totalDeleted += recentOldMessages.size;
+                            console.log(`✅ 批量删除了 ${recentOldMessages.size} 条消息`);
                         } catch (bulkError) {
-                            // 如果批量删除失败，逐条删除
                             console.log(`⚠️  批量删除失败，改为逐条删除: ${bulkError.message}`);
-                            let deletedCount = 0;
-                            for (const [messageId, message] of oldMessages) {
+                            for (const [messageId, message] of recentOldMessages) {
                                 try {
                                     await message.delete();
-                                    deletedCount++;
+                                    totalDeleted++;
                                 } catch (deleteError) {
                                     console.error(`❌ 删除消息失败: ${deleteError.message}`);
                                 }
                             }
-                            console.log(`✅ 已逐条清理服务器 ${guild.name} 欢迎频道的 ${deletedCount} 条消息`);
+                            console.log(`✅ 逐条删除了 ${totalDeleted} 条消息`);
                         }
-                    } else {
-                        console.log(`📝 服务器 ${guild.name} 欢迎频道无需清理`);
                     }
+                    
+                    // 逐条删除超过14天的消息
+                    if (veryOldMessages.size > 0) {
+                        console.log(`🔄 开始逐条删除超过14天的消息...`);
+                        for (const [messageId, message] of veryOldMessages) {
+                            try {
+                                await message.delete();
+                                totalDeleted++;
+                                // 添加延迟避免速率限制
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            } catch (deleteError) {
+                                console.error(`❌ 删除旧消息失败: ${deleteError.message}`);
+                            }
+                        }
+                    }
+                    
+                    console.log(`✅ 服务器 ${guild.name} 欢迎频道清理完成，共删除 ${totalDeleted} 条消息`);
+                } else {
+                    console.log(`📝 服务器 ${guild.name} 欢迎频道无需清理`);
                 }
             } catch (guildError) {
                 console.error(`❌ 清理服务器 ${guild.name} 欢迎频道时出错:`, guildError);
@@ -314,13 +392,27 @@ async function cleanWelcomeChannel() {
 
 // 启动欢迎频道清理定时器
 function startWelcomeChannelCleaner() {
+    console.log('🧹 正在启动欢迎频道清理器...');
+    
     // 立即执行一次清理
-    setTimeout(cleanWelcomeChannel, 60000); // 启动后1分钟执行第一次清理
+    console.log('⏰ 将在60秒后执行首次清理');
+    setTimeout(async () => {
+        console.log('🚀 执行首次自动清理...');
+        await cleanWelcomeChannel();
+    }, 60000); // 启动后1分钟执行第一次清理
     
     // 每24小时清理一次 (86400000 毫秒 = 24小时)
-    setInterval(cleanWelcomeChannel, 86400000);
+    const intervalId = setInterval(async () => {
+        console.log('🔄 执行定时清理...');
+        await cleanWelcomeChannel();
+    }, 86400000);
     
-    console.log('🧹 欢迎频道清理器已启动，每24小时清理一次');
+    console.log('✅ 欢迎频道清理器已启动');
+    console.log('📅 清理频率: 每24小时');
+    console.log('⏰ 下次清理时间:', new Date(Date.now() + 86400000).toLocaleString('zh-CN'));
+    
+    // 返回interval ID，以便需要时可以清除
+    return intervalId;
 }
 
 // 处理斜杠命令交互
@@ -405,6 +497,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
             
         } else if (commandName === 'verify') {
             await handleVerifyCommand(interaction);
+        } else if (commandName === 'clean') {
+            await handleCleanCommand(interaction);
         }
     } catch (error) {
         console.error('❌ 处理命令时出错:', error);
@@ -416,6 +510,45 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
     }
 });
+
+// 处理手动清理命令
+async function handleCleanCommand(interaction) {
+    try {
+        // 检查用户是否有管理员权限
+        if (!interaction.member.permissions.has('Administrator')) {
+            await interaction.reply({
+                content: '❌ 您没有权限执行此命令！此命令仅限管理员使用。',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await interaction.deferReply({ ephemeral: true });
+        
+        console.log(`🧹 管理员 ${interaction.user.tag} 手动触发清理功能`);
+        
+        // 执行清理
+        await cleanWelcomeChannel();
+        
+        await interaction.editReply({
+            content: '✅ 欢迎频道清理完成！请查看控制台日志了解详细信息。'
+        });
+        
+    } catch (error) {
+        console.error('❌ 处理清理命令时出错:', error);
+        
+        if (interaction.deferred) {
+            await interaction.editReply({
+                content: '❌ 执行清理时发生错误，请查看控制台日志了解详情。'
+            });
+        } else {
+            await interaction.reply({
+                content: '❌ 执行清理时发生错误！',
+                ephemeral: true
+            });
+        }
+    }
+}
 
 // 权限过期检查函数
 async function checkExpiredPermissions() {
