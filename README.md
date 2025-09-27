@@ -10,11 +10,25 @@ npm install
 ```
 
 ### 2. 配置机器人
+
+#### 本地开发
 1. 复制 `config.example.js` 为 `config.js`
 2. 在 Discord Developer Portal 获取你的机器人信息：
    - **TOKEN**: 在 Bot 页面点击 "Reset Token" 获取
    - **CLIENT_ID**: 在 General Information 页面的 Application ID
    - **GUILD_ID**: 右键点击你的服务器名称，选择"复制服务器ID"（需要开启开发者模式）
+
+#### 云端部署（推荐）
+设置以下环境变量：
+```bash
+DISCORD_TOKEN=your_discord_bot_token
+CLIENT_ID=your_discord_client_id
+GUILD_ID=your_discord_guild_id                    # 可选
+SUPABASE_URL=your_supabase_project_url            # 可选
+SUPABASE_ANON_KEY=your_supabase_anon_key         # 可选
+WELCOME_CHANNEL_ID=your_welcome_channel_id        # 可选
+TRINITY_CITIZEN_ROLE_ID=your_trinity_citizen_role_id  # 可选
+```
 
 ### 3. 启动机器人
 ```bash
