@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
+    "build": "node --check index.js && node --check config.js && echo \"✅ Build verification completed successfully!\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

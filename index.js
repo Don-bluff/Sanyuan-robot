@@ -16,12 +16,9 @@ try {
             supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
             // 欢迎频道配置
             welcomeChannelId: process.env.WELCOME_CHANNEL_ID,
-            // 角色配置 - 对应四种权限
+            // 角色配置 - Trinity Citizen权限
             roles: {
-                xitong: process.env.XITONG_ROLE_ID,    // 系统权限角色
-                gongfa: process.env.GONGFA_ROLE_ID,    // 功法权限角色
-                xinfa: process.env.XINFA_ROLE_ID,      // 心法权限角色
-                zhenfa: process.env.ZHENFA_ROLE_ID     // 阵法权限角色
+                trinity_citizen: process.env.TRINITY_CITIZEN_ROLE_ID    // Trinity Citizen角色
             }
         };
         console.log('✅ 使用环境变量配置');
@@ -170,60 +167,55 @@ client.on(Events.GuildMemberAdd, async (member) => {
         // 创建欢迎消息嵌入
         const welcomeEmbed = {
             color: 0x00ff88,
-            description: `👋 欢迎来到 **三元宇宙 Discord 社区**
+            description: `👋 **Welcome to Trinity Universe Discord Community**
 
-Hi ${member}，很高兴见到你！
+Hi ${member}, great to have you here!
 
-这是一个融合 **游戏化思维、认知成长与系统工具** 的学习型社区，我们相信：人生可以被设计，每位玩家都能构建属于自己的破局系统。
-
----
-
-📚 **主要频道功能简介：**
-
-🔹 **三千经阁**  
-> 分享各类实用系统工具与成长方法，涵盖 Notion 人生管理模板、结构化思维训练、记忆技巧等内容。适合习惯用工具拆解问题的玩家。
-
-🔹 **悟道殿**  
-> 用于输出个人思考、做决策复盘、记录灵感与自我觉察。适合希望提升认知能力与构建自我知识体系的玩家。
-
-🔹 **问道峰**  
-> 这是开放的交流区，欢迎大家提问、分享经验、吐槽成长过程。记录正能量，卸载负能量，鼓励开放、真诚、有深度的交流。
-
-🔹 **万象城**  
-> 德州扑克实战训练专区，用于手牌复盘、策略推演与破局演练。适合希望提升实战博弈与高维决策能力的玩家。
+This is a community focused on **personal growth and wealth building**. We believe that success can be designed, and every member can create their own breakthrough system.
 
 ---
 
-🔐 **权限说明：**
+🎯 **What We're About:**
 
-为了提供更聚焦的体验，我们设置了以下访问权限：
+💰 **Wealth Building Strategies**  
+> Share proven methods for generating income, investment insights, and financial freedom tactics. For those serious about building wealth.
 
-• 购买了**三元系统**的玩家，解锁三千经阁  
-• 购买了**三元功法**的玩家，解锁三千经阁  
-• 订阅了**三元心法**的玩家，解锁悟道殿  
-• 购买了**三元阵法**的玩家，解锁万象城  
-  
-   （🗣️ *问道峰为所有玩家开放，无需权限*）
+🚀 **Personal Growth & Development**  
+> Mindset training, productivity systems, goal achievement frameworks, and self-improvement strategies that actually work.
 
----
-
-✅ **如何解锁对应权限？**
-
-前往左侧频道<权限开通>，根据提示步骤操作即可激活。
----
-
-📎 **社区守则：**
-
-• 保持尊重与善意的交流氛围  
-• 聚焦学习、成长与系统性实践  
-• 鼓励输出分享，严禁刷屏与广告  
-• 请谨防私信诈骗，建议关闭陌生人私信  
-• 欢迎各阶段玩家参与交流，我们共同进化 🌀
+🎲 **High-Stakes Decision Making**  
+> Learn to think strategically, manage risk, and make profitable decisions under pressure. Real-world application of game theory.
 
 ---
 
-欢迎你加入三元宇宙！
-期待看到你在这个社区中的**探索、破局与分享** ✨
+🔐 **Access Requirements:**
+
+To participate in our main channels, you need **Trinity Citizen** status.
+
+🎫 **Don't have access yet?**
+
+Visit **donbluff.com** to purchase your invitation and unlock full community access.
+
+---
+
+✅ **How to Activate Your Access:**
+
+Check out 🎭role-assignment for detailed information on how to get your Trinity Citizen access.
+
+---
+
+📋 **Community Guidelines:**
+
+• Keep discussions focused on growth and wealth building  
+• Share valuable insights and experiences  
+• No spam, ads, or low-value content  
+• Be respectful and constructive in all interactions  
+• Help others level up - we grow together 📈
+
+---
+
+**Welcome to Trinity Universe!**
+Ready to **grow, earn, and win** together? 🚀
 
 
 `,
@@ -560,20 +552,20 @@ async function checkExpiredPermissions() {
     try {
         console.log('🔍 开始检查过期权限...');
         
-        // 查询所有已过期的 xinfa 权限
-        // 首先获取 xinfa 权限的 ID
-        const { data: xinfaPermission } = await supabase
+        // 查询所有已过期的 trinity_citizen 权限
+        // 首先获取 trinity_citizen 权限的 ID
+        const { data: trinityCitizenPermission } = await supabase
             .from('permissions')
             .select('id')
-            .eq('slug', 'xinfa')
+            .eq('slug', 'trinity_citizen')
             .single();
 
-        if (!xinfaPermission) {
-            console.log('⚠️  未找到 xinfa 权限定义');
+        if (!trinityCitizenPermission) {
+            console.log('⚠️  未找到 trinity_citizen 权限定义');
             return;
         }
 
-        // 查询过期的 xinfa 权限
+        // 查询过期的 trinity_citizen 权限
         const { data: expiredPermissions, error } = await supabase
             .from('user_permissions')
             .select(`
@@ -583,7 +575,7 @@ async function checkExpiredPermissions() {
                 discord_user_id
             `)
             .eq('is_active', true)
-            .eq('permission_id', xinfaPermission.id)
+            .eq('permission_id', trinityCitizenPermission.id)
             .not('expires_at', 'is', null)
             .lt('expires_at', new Date().toISOString());
 
@@ -593,7 +585,7 @@ async function checkExpiredPermissions() {
         }
 
         if (!expiredPermissions || expiredPermissions.length === 0) {
-            console.log('✅ 没有发现过期的 xinfa 权限');
+            console.log('✅ 没有发现过期的 trinity_citizen 权限');
             return;
         }
 
@@ -609,11 +601,11 @@ async function checkExpiredPermissions() {
             expiredPermissionsWithUserInfo.push({
                 ...perm,
                 user_profiles: userProfile || { email: 'unknown', nickname: 'unknown' },
-                permissions: { slug: 'xinfa', name: '心法权限' }
+                permissions: { slug: 'trinity_citizen', name: 'Trinity Citizen' }
             });
         }
 
-        console.log(`📋 发现 ${expiredPermissionsWithUserInfo.length} 个过期的 xinfa 权限`);
+        console.log(`📋 发现 ${expiredPermissionsWithUserInfo.length} 个过期的 trinity_citizen 权限`);
 
         // 处理每个过期权限
         for (const expiredPerm of expiredPermissionsWithUserInfo) {
@@ -634,9 +626,9 @@ async function checkExpiredPermissions() {
                 }
 
                 // 移除Discord角色
-                const xinfaRoleId = config.roles.xinfa;
-                if (!xinfaRoleId) {
-                    console.warn('⚠️  xinfa 角色ID未配置');
+                const trinityCitizenRoleId = config.roles.trinity_citizen;
+                if (!trinityCitizenRoleId) {
+                    console.warn('⚠️  trinity_citizen 角色ID未配置');
                     continue;
                 }
 
@@ -648,36 +640,36 @@ async function checkExpiredPermissions() {
                     for (const [guildId, guild] of client.guilds.cache) {
                         try {
                             const member = await guild.members.fetch(expiredPerm.discord_user_id).catch(() => null);
-                            if (member && member.roles.cache.has(xinfaRoleId)) {
-                                await member.roles.remove(xinfaRoleId);
+                            if (member && member.roles.cache.has(trinityCitizenRoleId)) {
+                                await member.roles.remove(trinityCitizenRoleId);
                                 roleRemoved = true;
                                 
                                 // 通知用户权限已过期
                                 try {
                                     const notificationEmbed = {
                                         color: 0xff9900,
-                                        title: '⏰ 权限过期通知',
-                                        description: '您的心法权限已到期',
+                                        title: '⏰ Access Expired',
+                                        description: 'Your Trinity Citizen access has expired',
                                         fields: [
                                             {
-                                                name: '📚 过期权限',
-                                                value: '心法权限 (xinfa)',
+                                                name: '📚 Expired Access',
+                                                value: 'Trinity Citizen',
                                                 inline: true
                                             },
                                             {
-                                                name: '⏰ 过期时间',
-                                                value: new Date(expiredPerm.expires_at).toLocaleString('zh-CN'),
+                                                name: '⏰ Expiration Date',
+                                                value: new Date(expiredPerm.expires_at).toLocaleString('en-US'),
                                                 inline: true
                                             },
                                             {
-                                                name: '🔄 续订说明',
-                                                value: '如需继续使用，请前往三元宇宙网站续订订阅',
+                                                name: '🔄 Renewal',
+                                                value: 'To continue accessing the community, please visit donbluff.com to renew your membership',
                                                 inline: false
                                             }
                                         ],
                                         timestamp: new Date().toISOString(),
                                         footer: {
-                                            text: '三元宇宙权限管理系统'
+                                            text: 'Trinity Universe Access Management'
                                         }
                                     };
                                     
@@ -687,7 +679,7 @@ async function checkExpiredPermissions() {
                                     console.log(`⚠️  无法向用户 ${member.user.tag} 发送私信通知`);
                                 }
                                 
-                                console.log(`✅ 已移除用户 ${member.user.tag} 在服务器 ${guild.name} 的 xinfa 角色`);
+                                console.log(`✅ 已移除用户 ${member.user.tag} 在服务器 ${guild.name} 的 trinity_citizen 角色`);
                                 break; // 找到用户后跳出服务器循环
                             }
                         } catch (memberError) {
@@ -725,7 +717,7 @@ async function handleVerifyCommand(interaction) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         await interaction.reply({
-            content: '❌ 邮箱格式不正确，请提供有效的邮箱地址！',
+            content: '❌ Invalid email format. Please provide a valid email address!',
             ephemeral: true
         });
         return;
@@ -733,7 +725,7 @@ async function handleVerifyCommand(interaction) {
     
     if (!supabase) {
         await interaction.reply({
-            content: '❌ 邮箱验证功能暂时不可用，请联系管理员！',
+            content: '❌ Email verification is temporarily unavailable. Please contact an administrator!',
             ephemeral: true
         });
         return;
@@ -752,7 +744,7 @@ async function handleVerifyCommand(interaction) {
         
         if (userError || !userProfile) {
             await interaction.editReply({
-                content: '❌ 未找到与此邮箱关联的账户，请确认邮箱地址是否正确或联系管理员！'
+                content: '❌ No account found with this email address. Please check your email or contact an administrator!'
             });
             return;
         }
@@ -777,7 +769,7 @@ async function handleVerifyCommand(interaction) {
         if (permError) {
             console.error('查询权限时出错:', permError);
             await interaction.editReply({
-                content: '❌ 查询权限时发生错误，请稍后重试！'
+                content: '❌ Error occurred while checking permissions. Please try again later!'
             });
             return;
         }
@@ -789,7 +781,7 @@ async function handleVerifyCommand(interaction) {
         
         if (!activePermissions || activePermissions.length === 0) {
             await interaction.editReply({
-                content: '❌ 您的账户暂无有效权限，请联系管理员或购买相关产品！'
+                content: '❌ Your account has no valid permissions. Please visit donbluff.com to purchase access or contact an administrator!'
             });
             return;
         }
@@ -847,17 +839,17 @@ async function handleVerifyCommand(interaction) {
         // 创建结果消息
         const embed = {
             color: assignedRoles.length > 0 ? 0x00ff00 : 0xff9900,
-            title: assignedRoles.length > 0 ? '✅ 验证成功！' : '⚠️  部分验证完成',
-            description: `用户 **${userProfile.nickname || '已验证用户'}** 的权限验证结果：`,
+            title: assignedRoles.length > 0 ? '✅ Verification Successful!' : '⚠️  Partial Verification Complete',
+            description: `Verification results for **${userProfile.nickname || 'Verified User'}**:`,
             fields: [
                 {
-                    name: '📧 验证状态',
-                    value: '邮箱验证成功',
+                    name: '📧 Verification Status',
+                    value: 'Email verification successful',
                     inline: true
                 },
                 {
-                    name: '🔒 隐私保护',
-                    value: '原始验证消息已删除',
+                    name: '🔒 Privacy Protection',
+                    value: 'Original verification message deleted',
                     inline: true
                 }
             ],
@@ -866,11 +858,11 @@ async function handleVerifyCommand(interaction) {
         
         if (assignedRoles.length > 0) {
             embed.fields.push({
-                name: '🎭 已分配角色',
+                name: '🎭 Assigned Roles',
                 value: assignedRoles.map(role => {
                     const expiryInfo = role.expires ? 
-                        `\n   ⏰ 到期: ${new Date(role.expires).toLocaleDateString('zh-CN')}` : 
-                        '\n   ⏰ 永久有效';
+                        `\n   ⏰ Expires: ${new Date(role.expires).toLocaleDateString('en-US')}` : 
+                        '\n   ⏰ Permanent Access';
                     return `• **${role.name}** (${role.permission})${expiryInfo}`;
                 }).join('\n'),
                 inline: false
@@ -879,7 +871,7 @@ async function handleVerifyCommand(interaction) {
         
         if (failedRoles.length > 0) {
             embed.fields.push({
-                name: '❌ 分配失败',
+                name: '❌ Assignment Failed',
                 value: failedRoles.join(', '),
                 inline: false
             });
@@ -893,7 +885,7 @@ async function handleVerifyCommand(interaction) {
                 
                 // 通过私信发送验证结果，确保隐私
                 await interaction.user.send({ 
-                    content: '🔐 **三元宇宙身份验证结果**\n\n为了保护您的隐私，验证结果通过私信发送：',
+                    content: '🔐 **Trinity Universe Verification Results**\n\nFor your privacy, verification results are sent via direct message:',
                     embeds: [embed] 
                 });
                 
@@ -904,8 +896,8 @@ async function handleVerifyCommand(interaction) {
                 
                 // 如果删除失败或无法发送私信，仍然通过ephemeral回复显示结果
                 embed.fields.push({
-                    name: '⚠️  注意',
-                    value: '无法删除原始消息或发送私信，请手动删除验证消息以保护隐私',
+                    name: '⚠️  Notice',
+                    value: 'Unable to delete original message or send DM. Please manually delete verification message for privacy.',
                     inline: false
                 });
                 
@@ -921,7 +913,7 @@ async function handleVerifyCommand(interaction) {
     } catch (error) {
         console.error('❌ 邮箱验证过程出错:', error);
         await interaction.editReply({
-            content: '❌ 验证过程中发生错误，请稍后重试或联系管理员！'
+            content: '❌ An error occurred during verification. Please try again later or contact an administrator!'
         });
     }
 }
