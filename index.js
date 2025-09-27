@@ -84,32 +84,32 @@ const client = new Client({
 const commands = [
     new SlashCommandBuilder()
         .setName('ping')
-        .setDescription('检查机器人是否在线'),
+        .setDescription('Check if the bot is online'),
     
     new SlashCommandBuilder()
         .setName('hello')
-        .setDescription('向机器人问好'),
+        .setDescription('Say hello to the bot'),
     
     new SlashCommandBuilder()
         .setName('serverinfo')
-        .setDescription('显示服务器信息'),
+        .setDescription('Display server information'),
     
     new SlashCommandBuilder()
         .setName('status')
-        .setDescription('显示机器人运行状态'),
+        .setDescription('Show bot status and runtime information'),
     
     new SlashCommandBuilder()
         .setName('verify')
-        .setDescription('通过邮箱验证获得权限')
+        .setDescription('Verify your email to get access permissions')
         .addStringOption(option =>
             option.setName('email')
-                .setDescription('你的邮箱地址')
+                .setDescription('Your email address')
                 .setRequired(true)
         ),
     
     new SlashCommandBuilder()
         .setName('clean')
-        .setDescription('手动清理欢迎频道消息（仅管理员）')
+        .setDescription('Manually clean welcome channel messages (Admin only)')
 ];
 
 // 当机器人准备就绪时触发
@@ -118,7 +118,7 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.log(`🌐 运行环境: ${process.env.NODE_ENV || 'development'}`);
     
     // 设置机器人状态
-    client.user.setActivity('三元宇宙', { type: 'WATCHING' });
+    client.user.setActivity('Trinity Universe', { type: 'WATCHING' });
     
     // 注册斜杠命令
     try {
@@ -224,7 +224,7 @@ Ready to **grow, earn, and win** together? 🚀
             },
             timestamp: new Date().toISOString(),
             footer: {
-                text: '开始你的三元宇宙之旅吧！'
+                text: 'Start your Trinity Universe journey!'
             }
         };
         
@@ -416,10 +416,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
     try {
         if (commandName === 'ping') {
             const ping = Date.now() - interaction.createdTimestamp;
-            await interaction.reply(`🏓 Pong! 延迟: ${Math.abs(ping)}ms`);
+            await interaction.reply(`🏓 Pong! Latency: ${Math.abs(ping)}ms`);
             
         } else if (commandName === 'hello') {
-            await interaction.reply(`👋 你好，${interaction.user.displayName}！欢迎来到三元宇宙！`);
+            await interaction.reply(`👋 Hello, ${interaction.user.displayName}! Welcome to Trinity Universe!`);
             
         } else if (commandName === 'status') {
             const uptime = process.uptime();
@@ -429,25 +429,25 @@ client.on(Events.InteractionCreate, async (interaction) => {
             
             const embed = {
                 color: 0x00ff00,
-                title: '🤖 机器人状态',
+                title: '🤖 Bot Status',
                 fields: [
                     {
-                        name: '运行时间',
-                        value: `${hours}小时 ${minutes}分钟 ${seconds}秒`,
+                        name: 'Uptime',
+                        value: `${hours}h ${minutes}m ${seconds}s`,
                         inline: true
                     },
                     {
-                        name: '内存使用',
+                        name: 'Memory Usage',
                         value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
                         inline: true
                     },
                     {
-                        name: 'Node.js 版本',
+                        name: 'Node.js Version',
                         value: process.version,
                         inline: true
                     },
                     {
-                        name: '运行环境',
+                        name: 'Environment',
                         value: process.env.NODE_ENV || 'development',
                         inline: true
                     }
@@ -461,21 +461,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
             const guild = interaction.guild;
             const embed = {
                 color: 0x0099FF,
-                title: '📊 服务器信息',
+                title: '📊 Server Information',
                 fields: [
                     {
-                        name: '服务器名称',
+                        name: 'Server Name',
                         value: guild.name,
                         inline: true
                     },
                     {
-                        name: '成员数量',
+                        name: 'Member Count',
                         value: guild.memberCount.toString(),
                         inline: true
                     },
                     {
-                        name: '创建时间',
-                        value: guild.createdAt.toLocaleDateString('zh-CN'),
+                        name: 'Created Date',
+                        value: guild.createdAt.toLocaleDateString('en-US'),
                         inline: true
                     }
                 ],
@@ -496,9 +496,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         console.error('❌ 处理命令时出错:', error);
         
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: '❌ 执行命令时发生错误！', ephemeral: true });
+            await interaction.followUp({ content: '❌ An error occurred while executing the command!', ephemeral: true });
         } else {
-            await interaction.reply({ content: '❌ 执行命令时发生错误！', ephemeral: true });
+            await interaction.reply({ content: '❌ An error occurred while executing the command!', ephemeral: true });
         }
     }
 });
@@ -509,7 +509,7 @@ async function handleCleanCommand(interaction) {
         // 检查用户是否有管理员权限
         if (!interaction.member.permissions.has('Administrator')) {
             await interaction.reply({
-                content: '❌ 您没有权限执行此命令！此命令仅限管理员使用。',
+                content: '❌ You do not have permission to execute this command! This command is for administrators only.',
                 ephemeral: true
             });
             return;
@@ -523,7 +523,7 @@ async function handleCleanCommand(interaction) {
         await cleanWelcomeChannel();
         
         await interaction.editReply({
-            content: '✅ 欢迎频道清理完成！请查看控制台日志了解详细信息。'
+            content: '✅ Welcome channel cleanup completed! Check console logs for detailed information.'
         });
         
     } catch (error) {
@@ -531,11 +531,11 @@ async function handleCleanCommand(interaction) {
         
         if (interaction.deferred) {
             await interaction.editReply({
-                content: '❌ 执行清理时发生错误，请查看控制台日志了解详情。'
+                content: '❌ An error occurred during cleanup. Check console logs for details.'
             });
         } else {
             await interaction.reply({
-                content: '❌ 执行清理时发生错误！',
+                content: '❌ An error occurred during cleanup!',
                 ephemeral: true
             });
         }
@@ -924,12 +924,12 @@ client.on(Events.MessageCreate, (message) => {
     if (message.author.bot) return;
     
     // 简单的关键词回复
-    if (message.content.toLowerCase().includes('三元宇宙')) {
+    if (message.content.toLowerCase().includes('trinity universe') || message.content.toLowerCase().includes('三元宇宙')) {
         message.react('🌌');
     }
     
     if (message.content.toLowerCase().includes('你好') || message.content.toLowerCase().includes('hello')) {
-        message.reply('👋 你好！我是三元宇宙的机器人助手！');
+        message.reply('👋 Hello! I am the Trinity Universe bot assistant!');
     }
 });
 
