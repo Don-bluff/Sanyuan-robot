@@ -41,6 +41,7 @@ npm start
 - `/ping` - 检查机器人延迟
 - `/hello` - 向机器人问好
 - `/serverinfo` - 显示服务器信息
+- `/redeem` - 使用邮箱兑换 Freelancer Notion 模板
 
 ### 消息响应
 - 提到"三元宇宙"时会添加 🌌 表情反应

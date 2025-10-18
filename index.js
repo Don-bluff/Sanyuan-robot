@@ -114,7 +114,7 @@ const commands = [
     
     new SlashCommandBuilder()
         .setName('redeem')
-        .setDescription('Redeem discount code access with your email')
+        .setDescription('Redeem your freelancer notion template with your email')
         .addStringOption(option =>
             option.setName('email')
                 .setDescription('Your email address')
@@ -568,13 +568,13 @@ async function handleRedeemCommand(interaction) {
             return;
         }
         
-        console.log(`🎫 用户 ${interaction.user.tag} 使用邮箱 ${email} 兑换折扣码`);
+        console.log(`🎫 用户 ${interaction.user.tag} 使用邮箱 ${email} 兑换 Freelancer Notion Template`);
         
         // 直接返回成功消息，引导用户去网站查看教程
         const successEmbed = {
             color: 0x00ff00,
-            title: '✅ Discount Code Submitted Successfully!',
-            description: `Your email **${email}** has been recorded for discount code redemption.`,
+            title: '✅ Template Redemption Submitted Successfully!',
+            description: `Your email **${email}** has been recorded for freelancer notion template redemption.`,
             fields: [
                 {
                     name: '📚 Next Steps',
@@ -600,20 +600,24 @@ async function handleRedeemCommand(interaction) {
         
         await interaction.reply({ embeds: [successEmbed], ephemeral: true });
         
-        console.log(`✅ 用户 ${interaction.user.tag} 成功提交邮箱 ${email} 进行折扣码兑换`);
+        console.log(`✅ 用户 ${interaction.user.tag} 成功提交邮箱 ${email} 进行 Freelancer Notion Template 兑换`);
         
     } catch (error) {
-        console.error('❌ 处理折扣码兑换时出错:', error);
+        console.error('❌ 处理 Freelancer Notion Template 兑换时出错:', error);
         
         await interaction.reply({
-            content: '❌ An unexpected error occurred during redemption. Please try again later or contact an administrator!',
+            content: '❌ An unexpected error occurred during template redemption. Please try again later or contact an administrator!',
             ephemeral: true
         });
     }
 }
 
-// 权限过期检查函数
+// 权限过期检查函数（已禁用）
 async function checkExpiredPermissions() {
+    // 功能已禁用 - 如需启用，请配置数据库权限表
+    console.log('ℹ️  权限过期检查功能已禁用');
+    return;
+    
     if (!supabase) {
         console.log('⚠️  Supabase 未配置，跳过权限过期检查');
         return;
@@ -1024,8 +1028,11 @@ process.on('SIGTERM', () => {
     process.exit(0);
 });
 
-// 启动定时检查（每小时检查一次）
+// 启动定时检查（已禁用）
 function startPermissionChecker() {
+    console.log('ℹ️  权限过期检查器已禁用');
+    return;
+    
     // 立即执行一次检查
     setTimeout(checkExpiredPermissions, 30000); // 启动后30秒执行第一次检查
     
