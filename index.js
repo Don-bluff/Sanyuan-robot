@@ -568,12 +568,94 @@ async function handleRedeemCommand(interaction) {
             return;
         }
         
-        console.log(`🎫 用户 ${interaction.user.tag} 使用邮箱 ${email} 兑换 Freelancer Notion Template`);
+        if (!supabase) {
+            await interaction.reply({
+                content: '❌ Database connection is not available. Please contact an administrator!',
+                ephemeral: true
+            });
+            return;
+        }
         
-        // 直接返回成功消息，引导用户去网站查看教程
+        // 延迟回复，因为数据库查询可能需要时间
+        await interaction.deferReply({ ephemeral: true });
+        
+        console.log(`🎫 用户 ${interaction.user.tag} 尝试使用邮箱 ${email} 兑换 Freelancer Notion Template`);
+        
+        // 检查折扣码状态
+        const { data: discountCode, error: discountError } = await supabase
+            .from('discount_codes')
+            .select('is_active')
+            .eq('code', 'DON BLUFF')
+            .single();
+        
+        if (discountError) {
+            console.error('❌ 查询折扣码状态时出错:', discountError);
+            await interaction.editReply({
+                content: '❌ Error checking discount code status. Please try again later!'
+            });
+            return;
+        }
+        
+        // 根据折扣码状态返回不同消息
+        if (!discountCode || !discountCode.is_active) {
+            // 折扣码未激活 - 显示直播提示
+            const inactiveEmbed = {
+                color: 0xff9900,
+                title: '⏰ Template Currently Unavailable',
+                description: 'The freelancer notion template is only available during live streams.',
+                fields: [
+                    {
+                        name: '📺 Live Stream Access',
+                        value: 'This template is exclusively available during our live streaming sessions.',
+                        inline: false
+                    },
+                    {
+                        name: '🔔 Get Notified',
+                        value: 'Visit **donbluff.com** → Contact Us → Follow our TikTok to get the first-hand notification of streaming times.',
+                        inline: false
+                    },
+                    {
+                        name: '🌐 Visit Website',
+                        value: '[donbluff.com](https://donbluff.com)',
+                        inline: true
+                    },
+                    {
+                        name: '📱 Follow TikTok',
+                        value: 'Follow us for live stream updates',
+                        inline: true
+                    }
+                ],
+                timestamp: new Date().toISOString(),
+                footer: {
+                    text: 'Trinity Universe - Live Stream Access'
+                }
+            };
+            
+            await interaction.editReply({ embeds: [inactiveEmbed] });
+            console.log(`⚠️  用户 ${interaction.user.tag} 尝试兑换但折扣码未激活`);
+            return;
+        }
+        
+        // 折扣码已激活 - 授予权限并显示成功
+        const { data: grantResult, error: grantError } = await supabase
+            .rpc('grant_permission_by_email', {
+                p_email: email,
+                p_perm_slug: 'xitong',
+                p_expires_at: null
+            });
+        
+        if (grantError) {
+            console.error('❌ 授予权限时出错:', grantError);
+            await interaction.editReply({
+                content: '❌ Error granting permissions. Please check your email address or contact an administrator!'
+            });
+            return;
+        }
+        
+        // 成功授予权限
         const successEmbed = {
             color: 0x00ff00,
-            title: '✅ Template Redemption Submitted Successfully!',
+            title: '✅ Template Redemption Successful!',
             description: `Your email **${email}** has been recorded for freelancer notion template redemption.`,
             fields: [
                 {
@@ -598,17 +680,23 @@ async function handleRedeemCommand(interaction) {
             }
         };
         
-        await interaction.reply({ embeds: [successEmbed], ephemeral: true });
+        await interaction.editReply({ embeds: [successEmbed] });
         
-        console.log(`✅ 用户 ${interaction.user.tag} 成功提交邮箱 ${email} 进行 Freelancer Notion Template 兑换`);
+        console.log(`✅ 成功为用户 ${interaction.user.tag} 的邮箱 ${email} 授予权限并兑换 Freelancer Notion Template`);
         
     } catch (error) {
         console.error('❌ 处理 Freelancer Notion Template 兑换时出错:', error);
         
-        await interaction.reply({
-            content: '❌ An unexpected error occurred during template redemption. Please try again later or contact an administrator!',
-            ephemeral: true
-        });
+        if (interaction.deferred) {
+            await interaction.editReply({
+                content: '❌ An unexpected error occurred during template redemption. Please try again later or contact an administrator!'
+            });
+        } else {
+            await interaction.reply({
+                content: '❌ An unexpected error occurred during template redemption!',
+                ephemeral: true
+            });
+        }
     }
 }
 
