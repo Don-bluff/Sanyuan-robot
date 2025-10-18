@@ -568,77 +568,28 @@ async function handleRedeemCommand(interaction) {
             return;
         }
         
-        if (!supabase) {
-            await interaction.reply({
-                content: '❌ Database connection is not available. Please contact an administrator!',
-                ephemeral: true
-            });
-            return;
-        }
+        console.log(`🎫 用户 ${interaction.user.tag} 使用邮箱 ${email} 兑换折扣码`);
         
-        // 延迟回复，因为数据库查询可能需要时间
-        await interaction.deferReply({ ephemeral: true });
-        
-        console.log(`🎫 用户 ${interaction.user.tag} 尝试使用邮箱 ${email} 兑换折扣码`);
-        
-        // 检查折扣码状态
-        const { data: discountCode, error: discountError } = await supabase
-            .from('discount_codes')
-            .select('is_active')
-            .eq('code', 'DON BLUFF')
-            .single();
-        
-        if (discountError) {
-            console.error('❌ 查询折扣码状态时出错:', discountError);
-            await interaction.editReply({
-                content: '❌ Error checking discount code status. Please try again later!'
-            });
-            return;
-        }
-        
-        if (!discountCode || !discountCode.is_active) {
-            await interaction.editReply({
-                content: '❌ The discount code is currently not active. Please check back later or contact an administrator!'
-            });
-            return;
-        }
-        
-        // 调用 grant_permission_by_email 函数授予权限
-        const { data: grantResult, error: grantError } = await supabase
-            .rpc('grant_permission_by_email', {
-                p_email: email,
-                p_perm_slug: 'xitong',
-                p_expires_at: null
-            });
-        
-        if (grantError) {
-            console.error('❌ 授予权限时出错:', grantError);
-            await interaction.editReply({
-                content: '❌ Error granting permissions. Please check your email address or contact an administrator!'
-            });
-            return;
-        }
-        
-        // 成功授予权限
+        // 直接返回成功消息，引导用户去网站查看教程
         const successEmbed = {
             color: 0x00ff00,
-            title: '✅ Discount Code Redeemed Successfully!',
-            description: `Permissions have been granted for **${email}**`,
+            title: '✅ Discount Code Submitted Successfully!',
+            description: `Your email **${email}** has been recorded for discount code redemption.`,
             fields: [
                 {
-                    name: '🎭 Granted Permission',
-                    value: 'Xitong Access',
-                    inline: true
-                },
-                {
-                    name: '⏰ Validity',
-                    value: 'Permanent Access',
-                    inline: true
-                },
-                {
-                    name: '📧 Next Steps',
-                    value: 'Use `/verify` command with your email to activate your Discord roles',
+                    name: '📚 Next Steps',
+                    value: 'Please visit **donbluff.com** to view detailed usage instructions and complete your setup.',
                     inline: false
+                },
+                {
+                    name: '🌐 Visit Website',
+                    value: '[donbluff.com](https://donbluff.com)',
+                    inline: true
+                },
+                {
+                    name: '⏰ Processing Time',
+                    value: 'Please allow some time for processing',
+                    inline: true
                 }
             ],
             timestamp: new Date().toISOString(),
@@ -647,23 +598,17 @@ async function handleRedeemCommand(interaction) {
             }
         };
         
-        await interaction.editReply({ embeds: [successEmbed] });
+        await interaction.reply({ embeds: [successEmbed], ephemeral: true });
         
-        console.log(`✅ 成功为用户 ${interaction.user.tag} 的邮箱 ${email} 授予 xitong 权限`);
+        console.log(`✅ 用户 ${interaction.user.tag} 成功提交邮箱 ${email} 进行折扣码兑换`);
         
     } catch (error) {
         console.error('❌ 处理折扣码兑换时出错:', error);
         
-        if (interaction.deferred) {
-            await interaction.editReply({
-                content: '❌ An unexpected error occurred during redemption. Please try again later or contact an administrator!'
-            });
-        } else {
-            await interaction.reply({
-                content: '❌ An unexpected error occurred during redemption!',
-                ephemeral: true
-            });
-        }
+        await interaction.reply({
+            content: '❌ An unexpected error occurred during redemption. Please try again later or contact an administrator!',
+            ephemeral: true
+        });
     }
 }
 
