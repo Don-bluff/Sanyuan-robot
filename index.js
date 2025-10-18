@@ -1,5 +1,5 @@
 // 三元宇宙 Discord 机器人
-const { Client, GatewayIntentBits, Events, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, Events, SlashCommandBuilder, REST, Routes, MessageFlags } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
 
 // 配置读取 - 优先使用环境变量，然后使用本地配置文件
@@ -69,6 +69,13 @@ if (config.supabaseUrl && config.supabaseAnonKey) {
 console.log(`🤖 机器人 ID: ${config.clientId}`);
 if (config.guildId) {
     console.log(`🏠 服务器 ID: ${config.guildId}`);
+}
+
+// 检测运行环境
+const isLocal = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+if (isLocal) {
+    console.log('🏠 本地开发环境检测到');
+    console.log('⚡ 使用立即响应策略以避免交互超时');
 }
 
 // 创建客户端实例
@@ -496,10 +503,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
     } catch (error) {
         console.error('❌ 处理命令时出错:', error);
         
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: '❌ An error occurred while executing the command!', ephemeral: true });
-        } else {
-            await interaction.reply({ content: '❌ An error occurred while executing the command!', ephemeral: true });
+        // 检查是否是Discord API错误，避免重复响应
+        if (error.code === 10062 || error.code === 40060) {
+            console.log('⚠️  Discord交互错误，跳过响应');
+            return;
+        }
+        
+        try {
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: '❌ An error occurred while executing the command!', flags: MessageFlags.Ephemeral });
+            } else {
+                await interaction.reply({ content: '❌ An error occurred while executing the command!', flags: MessageFlags.Ephemeral });
+            }
+        } catch (responseError) {
+            console.error('❌ 无法发送全局错误响应:', responseError.message);
         }
     }
 });
@@ -511,12 +528,12 @@ async function handleCleanCommand(interaction) {
         if (!interaction.member.permissions.has('Administrator')) {
             await interaction.reply({
                 content: '❌ You do not have permission to execute this command! This command is for administrators only.',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
         
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
         console.log(`🧹 管理员 ${interaction.user.tag} 手动触发清理功能`);
         
@@ -537,7 +554,7 @@ async function handleCleanCommand(interaction) {
         } else {
             await interaction.reply({
                 content: '❌ An error occurred during cleanup!',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
     }
@@ -553,7 +570,7 @@ async function handleRedeemCommand(interaction) {
         if (interaction.channelId !== targetChannelId) {
             await interaction.reply({
                 content: '❌ This command can only be used in the designated redemption channel.',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -563,21 +580,23 @@ async function handleRedeemCommand(interaction) {
         if (!emailRegex.test(email)) {
             await interaction.reply({
                 content: '❌ Invalid email format. Please provide a valid email address!',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
+        
+        // 立即回复确认，然后处理
+        await interaction.reply({
+            content: '🔄 Processing your template redemption request...',
+            flags: MessageFlags.Ephemeral
+        });
         
         if (!supabase) {
-            await interaction.reply({
-                content: '❌ Database connection is not available. Please contact an administrator!',
-                ephemeral: true
+            await interaction.editReply({
+                content: '❌ Database connection is not available. Please contact an administrator!'
             });
             return;
         }
-        
-        // 延迟回复，因为数据库查询可能需要时间
-        await interaction.deferReply({ ephemeral: true });
         
         console.log(`🎫 用户 ${interaction.user.tag} 尝试使用邮箱 ${email} 兑换 Freelancer Notion Template`);
         
@@ -590,9 +609,49 @@ async function handleRedeemCommand(interaction) {
         
         if (discountError) {
             console.error('❌ 查询折扣码状态时出错:', discountError);
-            await interaction.editReply({
-                content: '❌ Error checking discount code status. Please try again later!'
-            });
+            console.error('❌ 错误详情:', JSON.stringify(discountError, null, 2));
+            
+            // 如果数据库查询失败，默认显示直播限制消息
+            console.log('⚠️  数据库查询失败，使用默认行为（显示直播限制）');
+            
+            const fallbackEmbed = {
+                color: 0xff9900,
+                title: '⏰ Template Currently Unavailable',
+                description: 'The freelancer notion template is only available during live streams.',
+                fields: [
+                    {
+                        name: '📺 Live Stream Access',
+                        value: 'This template is exclusively available during our live streaming sessions.',
+                        inline: false
+                    },
+                    {
+                        name: '🔔 Get Notified',
+                        value: 'Visit **donbluff.com** → Contact Us → Follow our TikTok to get the first-hand notification of streaming times.',
+                        inline: false
+                    },
+                    {
+                        name: '🌐 Visit Website',
+                        value: '[donbluff.com](https://donbluff.com)',
+                        inline: true
+                    },
+                    {
+                        name: '📱 Follow TikTok',
+                        value: 'Follow us for live stream updates',
+                        inline: true
+                    },
+                    {
+                        name: '⚠️ Technical Note',
+                        value: 'Database connectivity issue - please contact admin if this persists',
+                        inline: false
+                    }
+                ],
+                timestamp: new Date().toISOString(),
+                footer: {
+                    text: 'Trinity Universe - Live Stream Access'
+                }
+            };
+            
+            await interaction.editReply({ embeds: [fallbackEmbed] });
             return;
         }
         
@@ -687,15 +746,31 @@ async function handleRedeemCommand(interaction) {
     } catch (error) {
         console.error('❌ 处理 Freelancer Notion Template 兑换时出错:', error);
         
-        if (interaction.deferred) {
-            await interaction.editReply({
-                content: '❌ An unexpected error occurred during template redemption. Please try again later or contact an administrator!'
-            });
-        } else {
-            await interaction.reply({
-                content: '❌ An unexpected error occurred during template redemption!',
-                ephemeral: true
-            });
+        // 检查是否是Discord API错误
+        if (error.code === 10062) {
+            console.log('⚠️  交互已过期，无法响应用户');
+            return;
+        }
+        
+        if (error.code === 40060) {
+            console.log('⚠️  交互已被确认，无法重复响应');
+            return;
+        }
+        
+        // 尝试响应错误，但要安全地处理
+        try {
+            if (interaction.deferred && !interaction.replied) {
+                await interaction.editReply({
+                    content: '❌ An unexpected error occurred during template redemption. Please try again later or contact an administrator!'
+                });
+            } else if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: '❌ An unexpected error occurred during template redemption!',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+        } catch (responseError) {
+            console.error('❌ 无法发送错误响应:', responseError.message);
         }
     }
 }
@@ -880,7 +955,7 @@ async function handleVerifyCommand(interaction) {
     if (!emailRegex.test(email)) {
         await interaction.reply({
             content: '❌ Invalid email format. Please provide a valid email address!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
         return;
     }
@@ -888,13 +963,13 @@ async function handleVerifyCommand(interaction) {
     if (!supabase) {
         await interaction.reply({
             content: '❌ Email verification is temporarily unavailable. Please contact an administrator!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
         return;
     }
     
     // 延迟回复，因为数据库查询可能需要时间
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     
     try {
         // 查询用户资料
@@ -1074,9 +1149,22 @@ async function handleVerifyCommand(interaction) {
         
     } catch (error) {
         console.error('❌ 邮箱验证过程出错:', error);
-        await interaction.editReply({
-            content: '❌ An error occurred during verification. Please try again later or contact an administrator!'
-        });
+        
+        // 检查是否是Discord API错误
+        if (error.code === 10062 || error.code === 40060) {
+            console.log('⚠️  交互错误，无法发送验证响应');
+            return;
+        }
+        
+        try {
+            if (interaction.deferred && !interaction.replied) {
+                await interaction.editReply({
+                    content: '❌ An error occurred during verification. Please try again later or contact an administrator!'
+                });
+            }
+        } catch (responseError) {
+            console.error('❌ 无法发送验证错误响应:', responseError.message);
+        }
     }
 }
 
