@@ -16,9 +16,10 @@ try {
             supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
             // 欢迎频道配置
             welcomeChannelId: process.env.WELCOME_CHANNEL_ID,
-            // 角色配置 - Trinity Citizen权限
+            // 角色配置 - 权限角色
             roles: {
-                trinity_citizen: process.env.TRINITY_CITIZEN_ROLE_ID    // Trinity Citizen角色
+                trinity_citizen: process.env.TRINITY_CITIZEN_ROLE_ID,    // Trinity Citizen角色
+                xitong: process.env.XITONG_ROLE_ID    // Xitong系统权限角色
             }
         };
         console.log('✅ 使用环境变量配置');
@@ -109,7 +110,16 @@ const commands = [
     
     new SlashCommandBuilder()
         .setName('clean')
-        .setDescription('Manually clean welcome channel messages (Admin only)')
+        .setDescription('Manually clean welcome channel messages (Admin only)'),
+    
+    new SlashCommandBuilder()
+        .setName('redeem')
+        .setDescription('Redeem discount code access with your email')
+        .addStringOption(option =>
+            option.setName('email')
+                .setDescription('Your email address')
+                .setRequired(true)
+        )
 ];
 
 // 当机器人准备就绪时触发
@@ -167,55 +177,44 @@ client.on(Events.GuildMemberAdd, async (member) => {
         // 创建欢迎消息嵌入
         const welcomeEmbed = {
             color: 0x00ff88,
-            description: `👋 **Welcome to Trinity Universe Discord Community**
+            description: `👋 **Welcome to the Trinity Universe Discord Community**
 
-Hi ${member}, great to have you here!
+Hi ${member} — we're excited to have you here!
+This is a community for builders of freedom — people mastering personal growth and wealth creation through systems, strategy, and self-awareness.
 
-This is a community focused on **personal growth and wealth building**. We believe that success can be designed, and every member can create their own breakthrough system.
+🎯 **Our Focus**
 
----
+💰 **Wealth Building & Financial Freedom**
 
-🎯 **What We're About:**
+Discover proven frameworks for earning, investing, and compounding wealth — designed for long-term independence.
 
-💰 **Wealth Building Strategies**  
-> Share proven methods for generating income, investment insights, and financial freedom tactics. For those serious about building wealth.
+🚀 **Personal Growth & Performance**
 
-🚀 **Personal Growth & Development**  
-> Mindset training, productivity systems, goal achievement frameworks, and self-improvement strategies that actually work.
+Upgrade your mindset, habits, and systems to unlock consistent growth and real-world results.
 
-🎲 **High-Stakes Decision Making**  
-> Learn to think strategically, manage risk, and make profitable decisions under pressure. Real-world application of game theory.
+🎲 **Strategic Decision Making**
 
----
+Learn how to think in probabilities, manage risk, and make profitable moves — from business to life.
 
-🔐 **Access Requirements:**
+🔐 **Access & Membership**
 
-To participate in our main channels, you need **Trinity Citizen** status.
+To join the main discussions, you'll need **Trinity Citizen** status.
 
 🎫 **Don't have access yet?**
+Visit **donbluff.com** to get your invitation and unlock the full experience.
 
-Visit **donbluff.com** to purchase your invitation and unlock full community access.
+Then check 🎭role-assignment for step-by-step instructions on activating your access.
 
----
+📋 **Community Guidelines**
 
-✅ **How to Activate Your Access:**
+• Stay focused on growth, wealth, and strategy
+• Share insights, not noise
+• No spam or promotions
+• Be respectful, direct, and constructive
+• Help others level up — we rise together 📈
 
-Check out 🎭role-assignment for detailed information on how to get your Trinity Citizen access.
-
----
-
-📋 **Community Guidelines:**
-
-• Keep discussions focused on growth and wealth building  
-• Share valuable insights and experiences  
-• No spam, ads, or low-value content  
-• Be respectful and constructive in all interactions  
-• Help others level up - we grow together 📈
-
----
-
-**Welcome to Trinity Universe!**
-Ready to **grow, earn, and win** together? 🚀
+✨ **Welcome to the Trinity Universe.**
+Here, we don't escape the system — we build our own. 🚀
 
 
 `,
@@ -491,6 +490,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
             await handleVerifyCommand(interaction);
         } else if (commandName === 'clean') {
             await handleCleanCommand(interaction);
+        } else if (commandName === 'redeem') {
+            await handleRedeemCommand(interaction);
         }
     } catch (error) {
         console.error('❌ 处理命令时出错:', error);
@@ -536,6 +537,130 @@ async function handleCleanCommand(interaction) {
         } else {
             await interaction.reply({
                 content: '❌ An error occurred during cleanup!',
+                ephemeral: true
+            });
+        }
+    }
+}
+
+// 处理折扣码兑换命令
+async function handleRedeemCommand(interaction) {
+    const email = interaction.options.getString('email').toLowerCase().trim();
+    const targetChannelId = '1429138384684843238';
+    
+    try {
+        // 检查是否在指定频道
+        if (interaction.channelId !== targetChannelId) {
+            await interaction.reply({
+                content: '❌ This command can only be used in the designated redemption channel.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        // 验证邮箱格式
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            await interaction.reply({
+                content: '❌ Invalid email format. Please provide a valid email address!',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        if (!supabase) {
+            await interaction.reply({
+                content: '❌ Database connection is not available. Please contact an administrator!',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        // 延迟回复，因为数据库查询可能需要时间
+        await interaction.deferReply({ ephemeral: true });
+        
+        console.log(`🎫 用户 ${interaction.user.tag} 尝试使用邮箱 ${email} 兑换折扣码`);
+        
+        // 检查折扣码状态
+        const { data: discountCode, error: discountError } = await supabase
+            .from('discount_codes')
+            .select('is_active')
+            .eq('code', 'DON BLUFF')
+            .single();
+        
+        if (discountError) {
+            console.error('❌ 查询折扣码状态时出错:', discountError);
+            await interaction.editReply({
+                content: '❌ Error checking discount code status. Please try again later!'
+            });
+            return;
+        }
+        
+        if (!discountCode || !discountCode.is_active) {
+            await interaction.editReply({
+                content: '❌ The discount code is currently not active. Please check back later or contact an administrator!'
+            });
+            return;
+        }
+        
+        // 调用 grant_permission_by_email 函数授予权限
+        const { data: grantResult, error: grantError } = await supabase
+            .rpc('grant_permission_by_email', {
+                p_email: email,
+                p_perm_slug: 'xitong',
+                p_expires_at: null
+            });
+        
+        if (grantError) {
+            console.error('❌ 授予权限时出错:', grantError);
+            await interaction.editReply({
+                content: '❌ Error granting permissions. Please check your email address or contact an administrator!'
+            });
+            return;
+        }
+        
+        // 成功授予权限
+        const successEmbed = {
+            color: 0x00ff00,
+            title: '✅ Discount Code Redeemed Successfully!',
+            description: `Permissions have been granted for **${email}**`,
+            fields: [
+                {
+                    name: '🎭 Granted Permission',
+                    value: 'Xitong Access',
+                    inline: true
+                },
+                {
+                    name: '⏰ Validity',
+                    value: 'Permanent Access',
+                    inline: true
+                },
+                {
+                    name: '📧 Next Steps',
+                    value: 'Use `/verify` command with your email to activate your Discord roles',
+                    inline: false
+                }
+            ],
+            timestamp: new Date().toISOString(),
+            footer: {
+                text: 'Trinity Universe Access Management'
+            }
+        };
+        
+        await interaction.editReply({ embeds: [successEmbed] });
+        
+        console.log(`✅ 成功为用户 ${interaction.user.tag} 的邮箱 ${email} 授予 xitong 权限`);
+        
+    } catch (error) {
+        console.error('❌ 处理折扣码兑换时出错:', error);
+        
+        if (interaction.deferred) {
+            await interaction.editReply({
+                content: '❌ An unexpected error occurred during redemption. Please try again later or contact an administrator!'
+            });
+        } else {
+            await interaction.reply({
+                content: '❌ An unexpected error occurred during redemption!',
                 ephemeral: true
             });
         }
