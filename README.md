@@ -38,14 +38,76 @@ npm start
 ## 🎯 功能特性
 
 ### 斜杠命令
+
+#### 基础命令
 - `/ping` - 检查机器人延迟
 - `/hello` - 向机器人问好
 - `/serverinfo` - 显示服务器信息
+- `/status` - 显示机器人状态和运行时信息
+- `/verify` - 验证邮箱获取权限
 - `/redeem` - 使用邮箱兑换 Freelancer Notion 模板
+
+#### 管理员命令
+- `/clean` - 手动清理欢迎频道消息（仅管理员）
+
+#### 服务器 Owner 专用命令
+- `/broadcast` - 发送 @everyone 广播公告
+- `/social` - 发布社交媒体内容通知
+- `/giveaway` - 发送福利发放通知
 
 ### 消息响应
 - 提到"三元宇宙"时会添加 🌌 表情反应
 - 说"你好"或"hello"时会回复问候
+
+## 🔐 Owner 专用功能详解
+
+### `/broadcast` - 广播公告
+**权限**: 仅服务器 Owner  
+**功能**: 发送带有 @everyone 的官方公告
+
+**参数**:
+- `message` (必填): 公告内容
+- `url` (可选): 相关链接
+
+**特色功能**:
+- 简洁的固定标题："Official Announcement"
+- 自动链接嵌套：`[Click here for details](URL)`
+- Embed 标题本身也会成为可点击链接
+- 全英文显示
+
+### `/social` - 社交媒体通知
+**权限**: 仅服务器 Owner  
+**功能**: 发布社交媒体内容更新通知
+
+**参数**:
+- `platform` (必填): 平台选择 (TikTok/YouTube/Twitter/Mystic Scroll)
+- `content` (必填): 内容简介
+- `link` (必填): 内容链接
+
+**特色功能**:
+- 平台特定颜色和表情符号：
+  - 🎵 TikTok: 黑色
+  - 📺 YouTube: 红色  
+  - 🐦 Twitter/X: 蓝色
+  - 📜 Mystic Scroll: 紫色
+- 多重嵌套链接：标题链接 + "Watch Now" + "Follow" 链接
+- 全英文显示和用户互动文案
+
+### `/giveaway` - Trinity Citizen Access码生成
+**权限**: 仅服务器 Owner  
+**功能**: 生成Trinity Citizen Access激活码并发送福利通知
+
+**参数**:
+- `quantity` (必填): 激活码数量 (1-50)
+
+**功能特色**:
+- 专注于Trinity Citizen Access激活码生成
+- 自动调用 Supabase 的 `generate_activation_codes` 函数
+- 参数设置：权限类型 'citizen'，时效性 'permanent'，代理商 'discord-bot'
+- 激活码发送到指定管理频道 (ID: 1430911703075393657)
+- 每个激活码单独精美显示，编号为 `Code #1`, `Code #2` 等
+- 自动链接到 donbluff.com
+- 所有内容均为英文显示
 
 ## 📁 项目结构
 ```

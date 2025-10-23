@@ -126,6 +126,57 @@ const commands = [
             option.setName('email')
                 .setDescription('Your email address')
                 .setRequired(true)
+        ),
+    
+    // 服务器 Owner 专用命令
+    new SlashCommandBuilder()
+        .setName('broadcast')
+        .setDescription('Send a broadcast announcement with @everyone (Owner only)')
+        .addStringOption(option =>
+            option.setName('message')
+                .setDescription('Announcement message')
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option.setName('url')
+                .setDescription('Optional URL link')
+                .setRequired(false)
+        ),
+    
+    new SlashCommandBuilder()
+        .setName('social')
+        .setDescription('Post new social media content notification with @everyone (Owner only)')
+        .addStringOption(option =>
+            option.setName('platform')
+                .setDescription('Social media platform')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'TikTok', value: 'tiktok' },
+                    { name: 'YouTube', value: 'youtube' },
+                    { name: 'Twitter/X', value: 'twitter' },
+                    { name: 'Mystic Scroll', value: 'mystic' }
+                )
+        )
+        .addStringOption(option =>
+            option.setName('content')
+                .setDescription('Brief description of the content')
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option.setName('link')
+                .setDescription('Link to the content')
+                .setRequired(true)
+        ),
+    
+    new SlashCommandBuilder()
+        .setName('giveaway')
+        .setDescription('Generate Trinity Citizen Access codes and send giveaway notification (Owner only)')
+        .addIntegerOption(option =>
+            option.setName('quantity')
+                .setDescription('Number of Trinity Citizen Access codes to generate (1-50)')
+                .setRequired(true)
+                .setMinValue(1)
+                .setMaxValue(50)
         )
 ];
 
@@ -499,6 +550,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
             await handleCleanCommand(interaction);
         } else if (commandName === 'redeem') {
             await handleRedeemCommand(interaction);
+        } else if (commandName === 'broadcast') {
+            await handleBroadcastCommand(interaction);
+        } else if (commandName === 'social') {
+            await handleSocialCommand(interaction);
+        } else if (commandName === 'giveaway') {
+            await handleGiveawayCommand(interaction);
         }
     } catch (error) {
         console.error('❌ 处理命令时出错:', error);
@@ -510,9 +567,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
         
         try {
-            if (interaction.replied || interaction.deferred) {
+        if (interaction.replied || interaction.deferred) {
                 await interaction.followUp({ content: '❌ An error occurred while executing the command!', flags: MessageFlags.Ephemeral });
-            } else {
+        } else {
                 await interaction.reply({ content: '❌ An error occurred while executing the command!', flags: MessageFlags.Ephemeral });
             }
         } catch (responseError) {
@@ -586,7 +643,7 @@ async function handleRedeemCommand(interaction) {
         }
         
         // 立即回复确认，然后处理
-        await interaction.reply({
+            await interaction.reply({
             content: '🔄 Processing your template redemption request...',
             flags: MessageFlags.Ephemeral
         });
@@ -760,7 +817,7 @@ async function handleRedeemCommand(interaction) {
         // 尝试响应错误，但要安全地处理
         try {
             if (interaction.deferred && !interaction.replied) {
-                await interaction.editReply({
+            await interaction.editReply({
                     content: '❌ An unexpected error occurred during template redemption. Please try again later or contact an administrator!'
                 });
             } else if (!interaction.replied && !interaction.deferred) {
@@ -772,6 +829,346 @@ async function handleRedeemCommand(interaction) {
         } catch (responseError) {
             console.error('❌ 无法发送错误响应:', responseError.message);
         }
+    }
+}
+
+// 检查是否为服务器 Owner
+function isServerOwner(interaction) {
+    return interaction.guild.ownerId === interaction.user.id;
+}
+
+// 服务器 Owner 权限检查装饰器
+async function requireServerOwner(interaction, commandName) {
+    if (!isServerOwner(interaction)) {
+        await interaction.reply({
+            content: `❌ Only the server owner can use the \`/${commandName}\` command!`,
+            flags: MessageFlags.Ephemeral
+        });
+        return false;
+    }
+    return true;
+}
+
+// 处理广播命令 - 简化版
+async function handleBroadcastCommand(interaction) {
+    if (!(await requireServerOwner(interaction, 'broadcast'))) return;
+    
+    const message = interaction.options.getString('message');
+    const url = interaction.options.getString('url');
+    
+    await interaction.reply({
+        content: '📢 Broadcasting announcement...',
+        flags: MessageFlags.Ephemeral
+    });
+    
+    const broadcastEmbed = {
+        color: 0xff6b6b,
+        title: '📢 Official Announcement',
+        description: message,
+        fields: [],
+        timestamp: new Date().toISOString(),
+        footer: {
+            text: 'Trinity Universe Official Announcement'
+        }
+    };
+    
+    // 如果提供了URL，使用嵌套链接格式
+    if (url) {
+        // 设置embed本身的链接
+        broadcastEmbed.url = url;
+        
+        // 添加链接字段
+        broadcastEmbed.fields.push({
+            name: '🌐 Learn More',
+            value: `[Click here for details](${url})`,
+            inline: false
+        });
+    }
+    
+    try {
+        await interaction.channel.send({
+            content: '@everyone',
+            embeds: [broadcastEmbed]
+        });
+        
+        await interaction.editReply({
+            content: '✅ Broadcast sent successfully!'
+        });
+        
+        console.log(`📢 ${interaction.user.tag} sent broadcast announcement`);
+    } catch (error) {
+        console.error('❌ Failed to send broadcast:', error);
+        await interaction.editReply({
+            content: '❌ Failed to send broadcast. Please check bot permissions!'
+        });
+    }
+}
+
+// 处理社交媒体通知命令 - 使用平台特定的链接嵌套
+async function handleSocialCommand(interaction) {
+    if (!(await requireServerOwner(interaction, 'social'))) return;
+    
+    const platform = interaction.options.getString('platform');
+    const content = interaction.options.getString('content');
+    const link = interaction.options.getString('link');
+    
+    const platformEmojis = {
+        'tiktok': '🎵',
+        'youtube': '📺',
+        'twitter': '🐦',
+        'mystic': '📜'
+    };
+    
+    const platformNames = {
+        'tiktok': 'TikTok',
+        'youtube': 'YouTube',
+        'twitter': 'Twitter/X',
+        'mystic': 'Mystic Scroll'
+    };
+    
+    const platformColors = {
+        'tiktok': 0x000000,
+        'youtube': 0xFF0000,
+        'twitter': 0x1DA1F2,
+        'mystic': 0x9B59B6
+    };
+    
+    await interaction.reply({
+        content: '📱 Posting social media notification...',
+        flags: MessageFlags.Ephemeral
+    });
+    
+    const socialEmbed = {
+        color: platformColors[platform],
+        title: `${platformEmojis[platform]} New ${platformNames[platform]} Content!`,
+        description: content,
+        // 让标题本身成为链接
+        url: link,
+        fields: [
+            {
+                name: '🎯 Watch Now',
+                value: `[Click to view on ${platformNames[platform]}](${link})`,
+                inline: false
+            },
+            {
+                name: '💡 Support Us',
+                value: 'Like, share, and engage to support the community! 👍',
+                inline: false
+            },
+            {
+                name: '🔔 Stay Updated',
+                value: `[Follow our ${platformNames[platform]}](${link}) for the latest content`,
+                inline: false
+            }
+        ],
+        timestamp: new Date().toISOString(),
+        footer: {
+            text: `Trinity Universe ${platformNames[platform]} Update`
+        }
+    };
+    
+    try {
+        await interaction.channel.send({
+            content: '@everyone 🎉',
+            embeds: [socialEmbed]
+        });
+        
+        await interaction.editReply({
+            content: `✅ ${platformNames[platform]} notification sent successfully! Multiple clickable links included.`
+        });
+        
+        console.log(`📱 ${interaction.user.tag} sent ${platformNames[platform]} notification: ${content}`);
+    } catch (error) {
+        console.error('❌ Failed to send social media notification:', error);
+        await interaction.editReply({
+            content: '❌ Failed to send social media notification. Please check bot permissions!'
+        });
+    }
+}
+
+// 处理福利发放命令 - 简化版Trinity Citizen激活码生成
+async function handleGiveawayCommand(interaction) {
+    if (!(await requireServerOwner(interaction, 'giveaway'))) return;
+    
+    const quantity = interaction.options.getInteger('quantity');
+    
+    await interaction.reply({
+        content: '🎁 Generating Trinity Citizen Access codes...',
+        flags: MessageFlags.Ephemeral
+    });
+    
+    let activationCodes = [];
+    
+    // 生成激活码
+    if (supabase) {
+        try {
+            console.log(`🔧 Generating ${quantity} Trinity Citizen activation codes...`);
+            
+            // 调用 Supabase 函数生成激活码
+            const currentTime = new Date().toISOString();
+            const { data: codesData, error: codesError } = await supabase
+                .rpc('generate_activation_codes', {
+                    p_permission_slug: 'citizen',
+                    p_quantity: quantity,
+                    p_validity: 'permanent',
+                    p_agent_name: 'discord-bot',
+                    p_note: `Generated via Discord bot at ${currentTime}`
+                });
+            
+            if (codesError) {
+                console.error('❌ Failed to generate activation codes:', codesError);
+                await interaction.editReply({
+                    content: '❌ Failed to generate activation codes. Database error occurred!'
+                });
+                return;
+            }
+            
+            if (codesData && codesData.length > 0) {
+                activationCodes = codesData.map(item => item.activation_code || item.code);
+                console.log(`✅ Successfully generated ${activationCodes.length} activation codes`);
+            } else {
+                console.warn('⚠️ Activation code generation returned empty result');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error generating activation codes:', error);
+            await interaction.editReply({
+                content: '❌ Failed to generate activation codes. Please try again later!'
+            });
+            return;
+        }
+    } else {
+        await interaction.editReply({
+            content: '❌ Database connection not available!'
+        });
+        return;
+    }
+    
+    // 公开福利通知
+    const giveawayEmbed = {
+        color: 0x00ff88,
+        title: '🎁 🎭 Trinity Citizen Access Giveaway!',
+        description: 'Trinity Citizen Access codes are now available! Join our community and unlock exclusive benefits.',
+        fields: [
+            {
+                name: '⏰ Validity',
+                value: 'Permanent Access',
+                inline: true
+            },
+            {
+                name: '🎟️ Available Codes',
+                value: `**${activationCodes.length}** codes generated`,
+                inline: true
+            },
+            {
+                name: '🌐 Learn More',
+                value: '[Visit donbluff.com](https://donbluff.com)',
+                inline: false
+            },
+            {
+                name: '🏆 Good Luck!',
+                value: 'May the odds be in your favor! 🍀',
+                inline: false
+            }
+        ],
+        url: 'https://donbluff.com',
+        timestamp: new Date().toISOString(),
+        footer: {
+            text: 'Trinity Universe Giveaway'
+        }
+    };
+    
+    try {
+        // 发送公开的福利通知
+        await interaction.channel.send({
+            content: '@everyone 🎉',
+            embeds: [giveawayEmbed]
+        });
+        
+        // 发送激活码到指定频道
+        if (activationCodes.length > 0) {
+            const targetChannelId = '1430911703075393657';
+            const targetChannel = interaction.guild.channels.cache.get(targetChannelId);
+            
+            if (!targetChannel) {
+                console.error(`❌ Target channel not found: ${targetChannelId}`);
+                await interaction.editReply({
+                    content: `✅ Giveaway notification sent successfully!\n⚠️ Could not find target channel for activation codes.`
+                });
+                return;
+            }
+            
+            try {
+                // 发送简洁的标题信息
+                const headerEmbed = {
+                    color: 0x00ff88,
+                    title: '🔐 Trinity Citizen Access Codes',
+                    description: `Generated **${activationCodes.length}** Trinity Citizen Access codes`,
+                    fields: [
+                        {
+                            name: '📊 Details',
+                            value: `**Quantity**: ${activationCodes.length}\n**Validity**: Permanent\n**Type**: Trinity Citizen Access`,
+                            inline: false
+                        }
+                    ],
+                    timestamp: new Date().toISOString(),
+                    footer: {
+                        text: 'Trinity Universe Access Management'
+                    }
+                };
+                
+                await targetChannel.send({ embeds: [headerEmbed] });
+                
+                // 精美地显示每个激活码
+                for (let i = 0; i < activationCodes.length; i++) {
+                    const code = activationCodes[i];
+                    const codeEmbed = {
+                        color: 0x6c5ce7,
+                        title: `🎟️ Code #${i + 1}`,
+                        description: `\`\`\`${code}\`\`\``,
+                        footer: {
+                            text: 'Trinity Citizen Access Code'
+                        }
+                    };
+                    
+                    await targetChannel.send({ embeds: [codeEmbed] });
+                    
+                    // 添加短暂延迟避免速率限制
+                    if (i < activationCodes.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+                
+                await interaction.editReply({
+                    content: `✅ Giveaway notification sent successfully!\n🔐 ${activationCodes.length} Trinity Citizen Access codes generated and sent to <#${targetChannelId}>.`
+                });
+                
+                console.log(`✅ Activation codes sent to channel ${targetChannel.name} (${targetChannelId})`);
+                
+            } catch (channelError) {
+                console.error('❌ Failed to send activation codes to channel:', channelError);
+                
+                await interaction.editReply({
+                    content: `✅ Giveaway notification sent successfully!\n⚠️ Could not send codes to target channel. Please check bot permissions.`
+                });
+                
+                // 备用方案：在控制台输出激活码
+                console.log('\n🔐 Generated Activation Codes (Backup):');
+                console.log('================================');
+                activationCodes.forEach((code, index) => {
+                    console.log(`${index + 1}. ${code}`);
+                });
+                console.log('================================');
+            }
+        }
+        
+        console.log(`🎁 ${interaction.user.tag} generated Trinity Citizen giveaway (${activationCodes.length} codes)`);
+        
+    } catch (error) {
+        console.error('❌ Failed to send giveaway notification:', error);
+        await interaction.editReply({
+            content: '❌ Failed to send giveaway notification. Please check bot permissions!'
+        });
     }
 }
 
@@ -1158,9 +1555,9 @@ async function handleVerifyCommand(interaction) {
         
         try {
             if (interaction.deferred && !interaction.replied) {
-                await interaction.editReply({
-                    content: '❌ An error occurred during verification. Please try again later or contact an administrator!'
-                });
+        await interaction.editReply({
+            content: '❌ An error occurred during verification. Please try again later or contact an administrator!'
+        });
             }
         } catch (responseError) {
             console.error('❌ 无法发送验证错误响应:', responseError.message);
