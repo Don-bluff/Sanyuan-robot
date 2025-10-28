@@ -1,5 +1,5 @@
 // 三元宇宙 Discord 机器人
-const { Client, GatewayIntentBits, Events, SlashCommandBuilder, REST, Routes, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, Events, SlashCommandBuilder, REST, Routes, MessageFlags, ActivityType } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
 
 // 配置读取 - 优先使用环境变量，然后使用本地配置文件
@@ -186,7 +186,7 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.log(`🌐 运行环境: ${process.env.NODE_ENV || 'development'}`);
     
     // 设置机器人状态
-    client.user.setActivity('Trinity Universe', { type: 'WATCHING' });
+    client.user.setActivity('Trinity Universe', { type: ActivityType.Watching });
     
     // 注册斜杠命令
     try {
@@ -1010,9 +1010,9 @@ async function handleGiveawayCommand(interaction) {
                 .rpc('generate_activation_codes', {
                     p_permission_slug: 'citizen',
                     p_quantity: quantity,
-                    p_validity: 'permanent',
-                    p_agent_name: 'discord-bot',
-                    p_note: `Generated via Discord bot at ${currentTime}`
+                    p_duration_type: 'permanent',
+                    p_owner_name: 'discord-bot',
+                    p_notes: `Generated via Discord bot at ${currentTime}`
                 });
             
             if (codesError) {
@@ -1024,7 +1024,7 @@ async function handleGiveawayCommand(interaction) {
             }
             
             if (codesData && codesData.length > 0) {
-                activationCodes = codesData.map(item => item.activation_code || item.code);
+                activationCodes = codesData.map(item => item.generated_code);
                 console.log(`✅ Successfully generated ${activationCodes.length} activation codes`);
             } else {
                 console.warn('⚠️ Activation code generation returned empty result');
