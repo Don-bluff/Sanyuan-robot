@@ -955,26 +955,9 @@ async function handleSocialCommand(interaction) {
     const socialEmbed = {
         color: platformColors[platform],
         title: `${platformEmojis[platform]} New ${platformNames[platform]} Content!`,
-        description: content,
-        // 让标题本身成为链接
+        description: `**${content}**\n\n🎯 [Click to view on ${platformNames[platform]}](${link})`,
+        // 让标题本身成为链接，增强层次感
         url: link,
-        fields: [
-            {
-                name: '🎯 Watch Now',
-                value: `[Click to view on ${platformNames[platform]}](${link})`,
-                inline: false
-            },
-            {
-                name: '💡 Support Us',
-                value: 'Like, share, and engage to support the community! 👍',
-                inline: false
-            },
-            {
-                name: '🔔 Stay Updated',
-                value: `[Follow our ${platformNames[platform]}](${link}) for the latest content`,
-                inline: false
-            }
-        ],
         timestamp: new Date().toISOString(),
         footer: {
             text: `Trinity Universe ${platformNames[platform]} Update`
@@ -1124,27 +1107,7 @@ async function handleGiveawayCommand(interaction) {
             }
             
             try {
-                // 发送简洁的标题信息
-                const headerEmbed = {
-                    color: 0x00ff88,
-                    title: '🔐 Trinity Citizen Access Codes',
-                    description: `Generated **${activationCodes.length}** Trinity Citizen Access codes`,
-                    fields: [
-                        {
-                            name: '📊 Details',
-                            value: `**Quantity**: ${activationCodes.length}\n**Validity**: Permanent\n**Type**: Trinity Citizen Access`,
-                            inline: false
-                        }
-                    ],
-                    timestamp: new Date().toISOString(),
-                    footer: {
-                        text: 'Trinity Universe Access Management'
-                    }
-                };
-                
-                await targetChannel.send({ embeds: [headerEmbed] });
-                
-                // 精美地显示每个激活码
+                // 直接发送激活码，不需要标题卡片
                 for (let i = 0; i < activationCodes.length; i++) {
                     const code = activationCodes[i];
                     const codeEmbed = {
