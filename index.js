@@ -1,6 +1,8 @@
 // 三元宇宙 Discord 机器人
 const { Client, GatewayIntentBits, Events, SlashCommandBuilder, REST, Routes, MessageFlags, ActivityType } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
 
 // 配置读取 - 优先使用环境变量，然后使用本地配置文件
 let config;
@@ -947,39 +949,44 @@ async function handleSocialCommand(interaction) {
         'mystic': 0x9B59B6
     };
     
-    await interaction.reply({
+            await interaction.reply({
         content: '📱 Posting social media notification...',
         flags: MessageFlags.Ephemeral
     });
     
-    const socialEmbed = {
-        color: platformColors[platform],
-        title: `${platformEmojis[platform]} New ${platformNames[platform]} Content!`,
-        description: `**${content}**\n\n🎯 [Click to view on ${platformNames[platform]}](${link})`,
-        // 让标题本身成为链接，增强层次感
-        url: link,
-        timestamp: new Date().toISOString(),
-        footer: {
-            text: `Trinity Universe ${platformNames[platform]} Update`
-        }
-    };
+    // 使用自定义Banner图片，简化通知
     
     try {
+        // 发送Banner图片 + 简洁信息
         await interaction.channel.send({
-            content: '@everyone 🎉',
-            embeds: [socialEmbed]
+            content: `@everyone ${platformEmojis[platform]}\n\n**${content}**\n${link}`,
+            files: [{
+                attachment: path.join(__dirname, 'Banner.png'),
+                name: 'trinity-universe-banner.png'
+            }]
         });
         
         await interaction.editReply({
-            content: `✅ ${platformNames[platform]} notification sent successfully! Multiple clickable links included.`
+            content: `✅ ${platformNames[platform]} notification sent with Trinity Universe banner!`
         });
         
-        console.log(`📱 ${interaction.user.tag} sent ${platformNames[platform]} notification: ${content}`);
+        console.log(`📱 ${interaction.user.tag} sent ${platformNames[platform]} notification with banner: ${content}`);
     } catch (error) {
         console.error('❌ Failed to send social media notification:', error);
-        await interaction.editReply({
-            content: '❌ Failed to send social media notification. Please check bot permissions!'
-        });
+        
+        // 如果Banner发送失败，回退到简单消息
+        try {
+            await interaction.channel.send({
+                content: `@everyone ${platformEmojis[platform]}\n\n**${content}**\n${link}`
+            });
+            await interaction.editReply({
+                content: `✅ ${platformNames[platform]} notification sent (banner unavailable)!`
+            });
+        } catch (fallbackError) {
+            await interaction.editReply({
+                content: '❌ Failed to send social media notification. Please check bot permissions!'
+            });
+        }
     }
 }
 
