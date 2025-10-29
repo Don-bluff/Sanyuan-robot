@@ -1017,6 +1017,8 @@ async function handleGiveawayCommand(interaction) {
     if (supabase) {
         try {
             console.log(`🔧 Generating ${quantity} Trinity Citizen activation codes...`);
+            console.log(`🔗 Supabase URL: ${config.supabaseUrl ? 'Connected' : 'Not configured'}`);
+            console.log(`🔑 Supabase Key: ${config.supabaseAnonKey ? 'Present' : 'Missing'}`);
             
             // 调用 Supabase 函数生成激活码
             const currentTime = new Date().toISOString();
@@ -1031,8 +1033,17 @@ async function handleGiveawayCommand(interaction) {
             
             if (codesError) {
                 console.error('❌ Failed to generate activation codes:', codesError);
+                console.error('❌ Error details:', JSON.stringify(codesError, null, 2));
+                console.error('❌ Function params sent:', {
+                    p_permission_slug: 'citizen',
+                    p_quantity: quantity,
+                    p_duration_type: 'permanent',
+                    p_owner_name: 'discord-bot',
+                    p_notes: `Generated via Discord bot at ${currentTime}`
+                });
+                
                 await interaction.editReply({
-                    content: '❌ Failed to generate activation codes. Database error occurred!'
+                    content: `❌ Failed to generate activation codes.\n**Error**: ${codesError.message || codesError.details || 'Unknown database error'}\n**Code**: ${codesError.code || 'N/A'}`
                 });
                 return;
             }
