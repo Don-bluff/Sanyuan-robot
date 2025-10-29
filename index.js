@@ -886,8 +886,9 @@ async function handleBroadcastCommand(interaction) {
     }
     
     try {
+        // 先测试基本发送权限
         await interaction.channel.send({
-            content: '@everyone',
+            content: '@everyone 📢',
             embeds: [broadcastEmbed]
         });
         
@@ -898,8 +899,21 @@ async function handleBroadcastCommand(interaction) {
         console.log(`📢 ${interaction.user.tag} sent broadcast announcement`);
     } catch (error) {
         console.error('❌ Failed to send broadcast:', error);
+        console.error('❌ Error details:', error.message);
+        console.error('❌ Error code:', error.code);
+        
+        // 提供更具体的错误信息
+        let errorMessage = '❌ Failed to send broadcast. ';
+        if (error.code === 50013) {
+            errorMessage += 'Missing permissions: Send Messages, Embed Links, or Mention Everyone.';
+        } else if (error.code === 50001) {
+            errorMessage += 'Missing access to this channel.';
+        } else {
+            errorMessage += `Error: ${error.message}`;
+        }
+        
         await interaction.editReply({
-            content: '❌ Failed to send broadcast. Please check bot permissions!'
+            content: errorMessage
         });
     }
 }
