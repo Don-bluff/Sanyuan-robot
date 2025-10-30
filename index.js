@@ -156,7 +156,7 @@ const commands = [
                     { name: 'TikTok', value: 'tiktok' },
                     { name: 'YouTube', value: 'youtube' },
                     { name: 'Twitter/X', value: 'twitter' },
-                    { name: 'Mystic Scroll', value: 'mystic' }
+                    { name: 'Trinity universe', value: 'mystic' }
                 )
         )
         .addStringOption(option =>
@@ -939,7 +939,7 @@ async function handleSocialCommand(interaction) {
         'tiktok': 'TikTok',
         'youtube': 'YouTube',
         'twitter': 'Twitter/X',
-        'mystic': 'Mystic Scroll'
+        'mystic': 'Trinity universe'
     };
     
     const platformColors = {

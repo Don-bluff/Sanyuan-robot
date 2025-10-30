@@ -80,7 +80,7 @@ npm start
 **功能**: 发布社交媒体内容更新通知
 
 **参数**:
-- `platform` (必填): 平台选择 (TikTok/YouTube/Twitter/Mystic Scroll)
+- `platform` (必填): 平台选择 (TikTok/YouTube/Twitter/Trinity universe)
 - `content` (必填): 内容简介
 - `link` (必填): 内容链接
 
@@ -89,7 +89,7 @@ npm start
   - 🎵 TikTok: 黑色
   - 📺 YouTube: 红色  
   - 🐦 Twitter/X: 蓝色
-  - 📜 Mystic Scroll: 紫色
+  - 📜 Trinity universe: 紫色
 - 多重嵌套链接：标题链接 + "Watch Now" + "Follow" 链接
 - 全英文显示和用户互动文案
 
