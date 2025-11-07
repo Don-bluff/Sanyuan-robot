@@ -45,7 +45,6 @@ npm start
 - `/serverinfo` - 显示服务器信息
 - `/status` - 显示机器人状态和运行时信息
 - `/verify` - 验证邮箱获取权限
-- `/redeem` - 使用邮箱兑换 Freelancer Notion 模板
 
 #### 管理员命令
 - `/clean` - 手动清理欢迎频道消息（仅管理员）
